@@ -77,3 +77,57 @@ def model(is_cont_africa, ruggedness, log_gdp=None):
         return pyro.sample("obs", dist.Normal(mean, sigma), obs=log_gdp)
     
 pyro.render_model(model, model_args=(is_cont_africa, ruggedness, log_gdp), render_distributions=True)
+
+
+# mean-field variational approximation for Bayesian linear regression in Pyro
+
+"""
+Background: “guide” programs as flexible approximate posteriors
+In variational inference, we introduce a parameterized distribution 
+ to approximate the true posterior, where 
+ are known as the variational parameters. This distribution is called the variational
+ distribution in much of the literature, and in the context of Pyro it’s 
+ called the guide (one syllable instead of nine!).
+
+ Just like the model, the guide is encoded as a Python program guide()
+ that contains pyro.sample and pyro.param statements.
+ It does not contain observed data, since the guide needs to be a properly
+ normalized distribution so that it is easy to sample from. Note that Pyro enforces
+ that model() and guide() should take the same arguments.
+
+ Allowing guides to be arbitrary Pyro programs opens up the possibility of
+ writing guide families that capture more of the problem-specific structure of
+ the true posterior, expanding the search space in only helpful directions,
+ as depicted schematically in the figure below.
+"""
+
+def custom_guide(is_cont_africa, ruggedness, log_gdp=None):
+    a_loc = pyro.param('a_loc', lambda: torch.tensor(0.))
+    a_scale = pyro.param('a_scale', lambda: torch.tensor(1.),
+                         constraint=constraints.positive)
+    sigma_loc = pyro.param('sigma_loc', lambda: torch.tensor(1.),
+                           constraint=constraints.positive)
+    weights_loc = pyro.param('weights_loc', lambda:torch.randn(3))
+    weights_scale = pyro.param('weights_scale', lambda: torch.ones(3),
+                               constraint=constraints.positive)
+    a = pyro.sample("a", dist.Normal(a_loc, a_scale))
+    b_a = pyro.sample("bA", dist.Normal(weights_loc[0], weights_scale[0]))
+    b_r = pyro.sample("bR", dist.Normal(weights_loc[1], weights_scale[1]))
+    b_ar = pyro.sample("bAR", dist.Normal(weights_loc[2], weights_scale[2]))
+    sigma = pyro.sample("sigma", dist.Normal(sigma_loc, torch.tensor(0.05)))
+    return {"a":a, "b_a":b_a, "b_r":b_r, "b_ar":b_ar, "sigma":sigma}
+
+pyro.render_model(custom_guide, model_args=(is_cont_africa, ruggedness, log_gdp),render_params=True)
+
+"""
+Pyro also contains an extensive collection of “autoguides” which automatically
+ generate guide programs from a given model. Like our handwritten guide,
+ all pyro.autoguide.AutoGuide instances (which are themselves just functions
+ that take the same arguments as the model) return a dictionary of values for
+ each pyro.sample site they contain.
+
+ The simplest autoguide class is AutoNormal, which automatically generates a guide
+ in a single line of code that is equivalent to the one we wrote out by hand above:
+"""
+
+auto_guide = pyro.infer.autoguide.AutoNormal(model)
