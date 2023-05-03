@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 import graphviz 
 
 import pyro
+import pyro.distributions as dist
+import pyro.distributions.constraints as constraints
+
+smoke_test = ('CI' in os.environ)
 
 DATA_URL = "https://d2hg8soec8ck9v.cloudfront.net/datasets/rugged_data.csv"
 data = pd.read_csv(DATA_URL, encoding="ISO-8859-1")
@@ -131,3 +135,81 @@ Pyro also contains an extensive collection of “autoguides” which automatical
 """
 
 auto_guide = pyro.infer.autoguide.AutoNormal(model)
+
+# Estimating and optimizing the Evidence Lower Bound (ELBO)
+
+"""
+The functional of model and guide that we will optimize is the ELBO,
+defined as an expectation w.r.t. to samples from the guide.
+
+By assumption we can compute all of the probabilities inside the expectation, and since the guide "q"
+is assumed to be a parametric distribution we can sample from, we can compute Monte Carlo estimates
+of this quantity as well as of gradients with respect to model and guide parameters.
+
+Optimizing the ELBO over model and guide parameters 
+via stochastic gradient descent using these gradient estimates is sometimes called stochastic
+variational inference (SVI).
+
+"""
+
+## example: Bayesian regression via stochastic variational inference (SVI)
+
+adam = pyro.optim.Adam({"lr": 0.02})
+elbo = pyro.infer.Trace_ELBO()
+svi = pyro.infer.SVI(model, auto_guide, adam, elbo)
+
+"""
+To take an ELBO gradient step we simply call the step method of SVI.
+The data argument we pass to SVI.step will be passed to both model() and guide().
+The complete training loop is as follows:
+"""
+
+pyro.clear_param_store()
+
+## These should be reset each training loop.
+auto_guide = pyro.infer.autoguide.AutoNormal(model)
+adam = pyro.optim.Adam({"lr": 0.05}) # consider decreasing learning rate
+elbo = pyro.infer.Trace_ELBO()
+svi = pyro.infer.SVI(model, auto_guide, adam, elbo)
+
+losses = []
+for step in range(2000 if not smoke_test else 2):
+    loss = svi.step(is_cont_africa, ruggedness, log_gdp)
+    losses.append(loss)
+    if step % 100 == 0:
+        logging.info("Elbo loss: {}". format(loss))
+
+plt.figure(figsize=(5, 2))
+plt.plot(losses)
+plt.xlabel("SVI step")
+plt.ylabel("ELBO loss");
+
+for name, value in pyro.get_param_store().items():
+    print(name, pyro.param(name).data.cpu().numpy())
+
+"""
+Finally, let us revisit our earlier question of how robust the relationship
+between terrain ruggedness and GDP is against any uncertainty in the parameter
+estimates from our model. For this, we plot the distribution of the slope of the
+log GDP given terrain ruggedness for nations within and outside Africa.
+
+We represent these two distributions with samples drawn from our trained guide.
+To draw multiple samples in parallel, we can call the guide within a pyro.plate
+statement which repeats and vectorizes the sampling operations for each pyro.
+sample statement in the guide, as described in the section introducing the pyro.
+plate primitive.
+"""
+
+with pyro.plate("samples", 800, dim=-1):
+    samples = auto_guide(is_cont_africa, ruggedness)
+
+gamma_within_africa = samples["bR"] + samples["b_AR"]
+gamma_outside_africa = samples["bR"]
+
+fig = plt.figure(figsize=(10, 6))
+sns.histplot(gamma_within_africa.detach().cpu().numpy(), kde=True, stat="density", label="Africa nations")
+sns.histplot(gamma_outside_africa.detach().cpu().numpy(), kde=True, stat="density", label="Non-African nations", color="orange")
+fig.suptitle("Density of Slope : log(GDP) vs. Terrain Ruggedness");
+plt.xlabel("Slope of regression line")
+plt.legend()
+plt.show()
