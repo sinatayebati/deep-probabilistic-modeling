@@ -12,4 +12,32 @@ By observing the outcome of a probabilistic program, we can describe an inferenc
 
 Pyro is a probabilistic programming language built on Python and PyTorch. Pyro programs are just Python programs, while its main inference technology is stochastic variational inference, which converts abstract probabilistic computations into concrete optimization problems solved with stochastic gradient descent in PyTorch, making probabilistic methods applicable to previously intractable model and dataset sizes.
 
-In this tutorial, we take a brief, opinionated tour of the basic concepts of probabilistic machine learning and probabilistic programming with Pyro. We do so via an example data analysis problem involving linear regression, one of the most common and basic tasks in machine learning. We will see how to use Pyro’s modeling language and inference algorithms to incorporate uncertainty into estimates of regression coefficients.
+In this repository, we take a brief, opinionated tour of the basic concepts of probabilistic machine learning and probabilistic programming with Pyro. We do so via an example data analysis problem involving linear regression, one of the most common and basic tasks in machine learning. We will see how to use Pyro’s modeling language and inference algorithms to incorporate uncertainty into estimates of regression coefficients.
+
+
+# Setup and Requirements
+
+This repository has been tested on the following environemt:
+
+```
+pyro == 1.8.4
+pytorch == 2.0.0
+pandas == 2.0.1
+numpy == 1.24.3
+matplotlib == 3.7.1
+seaborn == 0.12.2
+graphviz == 0.20.1
+```
+Clone the repository in your local machine, and activate your virtual environement:
+
+```
+git clone https://github.com/sina-tyi/Deep-probabilistic-modeling.git
+cd Deep-probabilistic-modeling
+source PyroVenv/bin/activate
+```
+
+Install the requirements:
+
+```
+pip install -r requirements.txt
+```
