@@ -16,5 +16,5 @@ pyro.enable_validation(True)
 pyro.set_rng_seed(1)
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 
-# Set matplotlib settings
+# set matplotlib settings
 plt.style.use('default')
