@@ -14,7 +14,8 @@ class Exp(nn.Module):
 
     def forward(self, val):
         return torch.exp(val)
-    
+
+
 class ConcatModule(nn.Module):
     """
     a custom module for concatenation of tensors
@@ -29,3 +30,13 @@ class ConcatModule(nn.Module):
             # regadrless of type,
             # we don't care about single objects
             # we just index into the object
+            input_args = input_args[0]
+
+        # don't concat things that are just single objects
+        if torch.is_tensor(input_args):
+            return input_args
+        else:
+            if self.allow_broadcast:
+                shape = broadcast_shape(*[s.shape[:-1] for s in input_args]) + (-1,)
+                input_args = [s.expand(shape) for s in input_args]
+            return torch.cat(input_args, dim=-1)
