@@ -40,3 +40,16 @@ class ConcatModule(nn.Module):
                 shape = broadcast_shape(*[s.shape[:-1] for s in input_args]) + (-1,)
                 input_args = [s.expand(shape) for s in input_args]
             return torch.cat(input_args, dim=-1)
+
+
+class ListOutModule(nn.ModuleList):
+    """
+    a custom module for outputting a list of tensors from a list of nn modules
+    """
+
+    def __init__(self, modules):
+        super().__init__(modules)
+
+    def forward(self, *args, **kwargs):
+        # loop over modules in self, apply same args
+        return [mm.forward(*args, **kwargs) for mm in self]
