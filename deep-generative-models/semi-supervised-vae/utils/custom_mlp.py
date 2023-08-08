@@ -53,3 +53,18 @@ class ListOutModule(nn.ModuleList):
     def forward(self, *args, **kwargs):
         # loop over modules in self, apply same args
         return [mm.forward(*args, **kwargs) for mm in self]
+    
+
+def call_nn_op(op):
+    """
+    a hlper function that adds appropriate parameters when calling
+    an nn module representing an operation like Softmax
+
+    :param op: the nn.Module operation to instantiate
+    :return: instantiation of the op module with appropriate parameters
+    """
+
+    if op in [nn.Softmax, nn.LogSoftmax]:
+        return op(dim=1)
+    else:
+        return op()
