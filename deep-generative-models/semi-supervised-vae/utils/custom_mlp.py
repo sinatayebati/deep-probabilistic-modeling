@@ -68,3 +68,29 @@ def call_nn_op(op):
         return op(dim=1)
     else:
         return op()
+    
+
+class MLP(nn.Module):
+    def __init__(
+        self,
+        mlp_sizes,
+        activation=nn.ReLU,
+        output_activation=None,
+        post_layer_fct=lambda layer_ix, total_layers, layer: None,
+        post_act_fct=lambda layer_ix, total_layers, layer: None,
+        allow_broadcast=False,
+        use_cuda=False,
+    ):
+        # init the module object
+        super().__init__()
+
+        assert len(mlp_sizes) >= 2, "Must have input and output layer sizes defined"
+
+        # get our inputs, outputs, and hidden
+        input_size, hidden_sizes, output_size = (
+            mlp_sizes[0],
+            mlp_sizes[1:-1],
+            mlp_sizes[-1],
+        )
+
+        
