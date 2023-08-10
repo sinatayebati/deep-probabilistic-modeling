@@ -93,4 +93,14 @@ class MLP(nn.Module):
             mlp_sizes[-1],
         )
 
-        
+        # assume int or list
+        assert isinstance(
+            input_size, (int, list, tuple)
+        ), "inpur_size must be int, list, tuple"
+
+        # everthing in MLP will be concatted if it's multiple arguments
+        last_layer_size = input_size if type(input_size) == int else sum(input_size)
+
+        # everything sent in will be concatted together by default
+        all_modules = [ConcatModule(allow_broadcast)]
+
