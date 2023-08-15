@@ -96,11 +96,30 @@ class MLP(nn.Module):
         # assume int or list
         assert isinstance(
             input_size, (int, list, tuple)
-        ), "inpur_size must be int, list, tuple"
+        ), "input_size must be int, list, tuple"
 
         # everthing in MLP will be concatted if it's multiple arguments
         last_layer_size = input_size if type(input_size) == int else sum(input_size)
 
         # everything sent in will be concatted together by default
         all_modules = [ConcatModule(allow_broadcast)]
+
+        # loop over l
+        for layer_ix, layer_size in enumerate(hidden_sizes):
+            assert type(layer_size) == int, "Hidden layer sizes must be integer"
+
+            # get our nn layer module (in this case nn.Linear by default)
+            cur_linear_layer = nn.Linear(last_layer_size, layer_size)
+
+            # for numerical stability -- initialize the layer properly
+            cur_linear_layer.weight.data.normal_(0, 0.001)
+            cur_linear_layer.bias.data.normal_(0, 0.001)
+
+            # add our linear layer
+            all_modules.append(cur_linear_layer)
+
+            # handle post_linear
+            post_linear = post_layer_fct(
+                layer_ix + 1, len(hidden_sizes), all_modules[-1]
+            )
 
