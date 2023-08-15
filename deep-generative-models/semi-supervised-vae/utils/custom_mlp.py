@@ -123,3 +123,78 @@ class MLP(nn.Module):
                 layer_ix + 1, len(hidden_sizes), all_modules[-1]
             )
 
+            # if we send something back, add it to sequential
+            # here we could return a batch norm for example
+            if post_linear is not None:
+                all_modules.append(post_linear)
+
+            # handle activation (assumed no params -- deal with that later)
+            all_modules.append(activation())
+
+            # now handle after activation
+            post_activation = post_act_fct(
+                layer_ix + 1, len(hidden_sizes), all_modules[-1]
+            )
+
+            # handle post_activation if not null
+            # could add batch norm for example
+            if post_activation is not None:
+                all_modules.append(post_activation)
+
+            # save the layer size we just created
+            last_layer_size = layer_size
+
+        # now we have all of our hidden layers
+        # we handle outputs
+        assert isinstance(
+            output_size, (int, list, tuple)
+        ), "output_size must be int, list, tupple"
+
+        if type(output_size) == int:
+            all_modules.append(nn.Linear(last_layer_size, output_size))
+            if output_activation is not None:
+                all_modules.append(
+                    call_nn_op(output_activation)
+                    if isclass(output_activation)
+                    else output_activation
+                )
+
+        else:
+            # we're goin to have a bunch of seperate layers we can spit out (a tuple of outputs)
+            out_layers = []
+
+            # multiple outputs? handle seperately
+            for out_ix, out_size in enumerate(output_size):
+                # for a single output object, we create a linear layer and some weights
+                split_layer = []
+
+                # we have an activation function
+                split_layer.append(nn.Linear(last_layer_size, out_size))
+
+                # then we get our output activation (either we repeat all or we index into a same sized array)
+                act_out_fct = (
+                    output_activation
+                    if not isinstance(output_activation, (list, tuple))
+                    else output_activation[out_ix]
+                )
+
+                if act_out_fct:
+                    # we check if it's a class. if so, instantiate the object
+                    # otherwide, use the object directly (e.g. pre-instantiated)
+                    split_layer.append(
+                        call_nn_op(act_out_fct) if isclass(act_out_fct) else act_out_fct
+                    )
+
+                # our output is just a sequential of the two
+                out_layers.append(nn.Sequential(*split_layer))
+
+            all_modules.append(ListOutModule(out_layers))
+
+        # now we have all of our modules, we're ready to build our sequential
+        # process mlps in order, pretty standard here
+        self.sequential_mlp = nn.Sequential(*all_modules)
+
+    # pass through our sequential for the output
+    def forward(self, *args, **kwargs):
+        return self.sequential_mlp.forward(*args, **kwargs)
+
