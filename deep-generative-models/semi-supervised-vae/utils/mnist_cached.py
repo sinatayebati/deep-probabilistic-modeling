@@ -26,3 +26,15 @@ def fn_x_mnist(x, use_cuda):
         xp = xp.cuda()
 
     return xp
+
+def fn_y_mnist(y, use_cuda):
+    yp = torch.zeros(y.size(0), 10)
+
+    # send the data to GPU
+    if use_cuda:
+        yp = yp.cuda()
+        y = y.cuda()
+
+    # transform the lavel y (integer between 0 and 9) to a one-hot
+    yp = yp.scatter_(1, y.view(-1, 1), 1.0)
+    return yp
