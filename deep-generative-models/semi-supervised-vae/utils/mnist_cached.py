@@ -38,3 +38,29 @@ def fn_y_mnist(y, use_cuda):
     # transform the lavel y (integer between 0 and 9) to a one-hot
     yp = yp.scatter_(1, y.view(-1, 1), 1.0)
     return yp
+
+def get_ss_indices_per_class(y ,sup_per_class):
+    # numer of indices to consider
+    n_indx = y.size()[0]
+
+    # calculate the indices per class
+    idxs_per_class = {j: [] for j in range(10)}
+
+    # for each index identify the class and add the index to the right class
+    for i in range(n_indx):
+        curr_y = y[i]
+        for j in range(10):
+            if curr_y[j] == 1:
+                idxs_per_class[j].append(i)
+                break
+    
+    idxs_sup = []
+    idxs_unsup = []
+    for j in range(10):
+        np.random.shuffle(idxs_per_class[j])
+        idxs_sup.extend(idxs_per_class[j][:sup_per_class])
+        idxs_unsup.extend(idxs_per_class[j][sup_per_class: len(idxs_per_class[j])])
+
+    return idxs_sup, idxs_unsup
+
+
