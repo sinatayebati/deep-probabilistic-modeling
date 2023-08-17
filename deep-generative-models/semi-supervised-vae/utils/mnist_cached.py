@@ -64,3 +64,47 @@ def get_ss_indices_per_class(y ,sup_per_class):
     return idxs_sup, idxs_unsup
 
 
+def split_sup_unsup_valid(X, y, sup_num, validation_num=10000):
+    """
+    this is a helper a function for splitting the data into supervised, un-supervised and validation parts
+    :param X: images
+    :param y: labels (digits)
+    :param sup_num: what number of last examples is supervised
+    :param validation_num: what number of last examples to use for validation
+    :return: splits of data by sup_num number of supervised examples
+    """
+
+    # validation set is the last 10,000 examples
+    X_valid = X[-validation_num:]
+    y_valid = y[-validation_num:]
+
+    X = X[0:-validation_num]
+    y = y[0:-validation_num]
+
+    assert sup_num % 10 == 0, "unable to have equal number of images per class"
+
+    # number of supervised examples per class
+    sup_per_class = int(sup_num / 10)
+
+    idxs_sup, idxs_unsup = get_ss_indices_per_class(y, sup_per_class)
+    X_sup = X[idxs_sup]
+    y_sup = y[idxs_sup]
+    X_unsup = X[idxs_unsup]
+    y_unsup = y[idxs_unsup]
+
+    return X_sup, y_sup, X_unsup, y_unsup, X_valid
+
+def print_distribution_labels(y):
+    """
+    helper function for printing the distribution of class labels in a dataset
+    :param y: tensor of class labels given as one-hots
+    :return: a dictionary of counts for each label from y
+    """
+
+    counts = {j: 0 for j in range(10)}
+    for i in range(y.size()[0]):
+        for j in range(10):
+            if y[i][j] == 1:
+                counts[j] += 1
+                break
+    print(counts)
